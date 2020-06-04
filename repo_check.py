@@ -35,9 +35,6 @@ for type_tag in root.findall('project'):
     revision = type_tag.get('revision')
     projects_list.append(Project(path, revision))
 
-#for aaaa in projects_list:
-#    print(aaaa)
-#exit()
 
 def is_repo_dirty(repo_path):
     repo = Repo(repo_path)
