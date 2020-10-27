@@ -103,6 +103,14 @@ def is_branch_present_on_remote(remote, branch_name):
     return is_present
 
 
+def is_remote_valid(remotes, name):
+    try:
+        remotes[name]  # just to check if raise error
+        return True
+    except (AttributeError, IndexError):
+        return False
+
+
 def local_and_remote_are_at_same_commit(repo, remote_name, branch_name, local_hexsha=None):
     if branch_name is None and local_hexsha is None:
         raise InputError("branch_name and commit_hexsha are None")
@@ -130,9 +138,11 @@ def is_remote_and_local_same(repo_project, force_fetch=False):
         print("Fetching remote for project ", repo_project.path, "...")
     remote_name = 'enplug'
 
-    try:
-        repo.remotes[remote_name]  # just to check if raise error
-    except (AttributeError, IndexError):
+    if is_remote_valid(repo.remotes, 'enplug'):
+        remote_name = 'enplug'
+    elif is_remote_valid(repo.remotes, 'enplug-the-company'):
+        remote_name = 'enplug-the-company'
+    else:
         remote_name = 'origin'
 
     if force_fetch:
