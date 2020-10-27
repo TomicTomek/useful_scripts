@@ -4,7 +4,6 @@ import xml.etree.ElementTree as ET
 import sys
 
 
-
 class bcolors:
     DARK_PURPLE = '\033[95m'
     BLUE = '\033[94m'
@@ -17,19 +16,19 @@ class bcolors:
 
 
 class Project:
-    def __init__(self, path, revision):
-        self.path = path
-        self.revision = revision
+    def __init__(self, project_path, project_revision):
+        self.path = project_path
+        self.revision = project_revision
+
     def __str__(self):
         return "patch: " + self.path + "\trevision: " + self.revision
+
 
 # parse projects from manifest
 manifest_path = ".repo/manifests/enplug.xml"
 root = ET.parse(manifest_path).getroot()
 
-
-projects_list = []
-projects_list.append(Project(".repo/manifests", "default"))
+projects_list = [Project(".repo/manifests", "default")]
 
 for type_tag in root.findall('project'):
     path = type_tag.get('path')
@@ -65,6 +64,34 @@ def print_stagged_files(repo_path):
         for indexed_file_path in repo.index.diff(repo.head.commit):
             print(bcolors.BLUE + "\t[i] " + indexed_file_path.a_path + bcolors.ENDC)
 
+
+def check_repositories_local_state():
+    global project
+    clean_repo_paths = []
+    dirty_repo_paths = []
+    for project in projects_list:
+        if is_repo_dirty(project.path):
+            dirty_repo_paths.append(project.path)
+        else:
+            clean_repo_paths.append(project.path)
+    print(bcolors.GREEN + "\nCLEAN repos" + bcolors.ENDC)
+    for repository_path in clean_repo_paths:
+        print(repository_path + "/")
+    print(bcolors.DARK_PURPLE + "\nDIRTY repos" + bcolors.ENDC)
+    for repository_path in dirty_repo_paths:
+        print(repository_path + "/")
+        print_untracked_files(repository_path)
+        print_modified_files(repository_path)
+        print_stagged_files(repository_path)
+
+
+def print_help():
+    print("Mini help:")
+    print("\t" + sys.argv[0] + " r\n\tRun script with remote mode - will compare to remotes.")
+    print("\t" + sys.argv[0] + " rf\n\tRun script with remote mode force - will fetch changes from server "
+                               "and compare to remote branches.")
+
+
 # remote compare START
 def is_branch_present_on_remote(remote, branch_name):
     is_present = False
@@ -77,19 +104,19 @@ def is_branch_present_on_remote(remote, branch_name):
 
 
 def local_and_remote_are_at_same_commit(repo, remote_name, branch_name, local_hexsha=None):
-    if branch_name == None and local_hexsha == None:
+    if branch_name is None and local_hexsha is None:
         raise InputError("branch_name and commit_hexsha are None")
 
     remote = repo.remotes[remote_name]
 
-    if branch_name == None:
+    if branch_name is None:
         # iterate by all branches
         for remote_branch_ref in remote.refs:
             if local_hexsha == remote_branch_ref.commit.hexsha:
                 return True
         return False
 
-    if local_hexsha == None:
+    if local_hexsha is None:
         local_commit = repo.heads[branch_name].commit
         local_hexsha = local_commit.hexsha
 
@@ -104,7 +131,7 @@ def is_remote_and_local_same(repo_project, force_fetch=False):
     remote_name = 'enplug'
 
     try:
-        repo.remotes[remote_name]           # just to check if raise error
+        repo.remotes[remote_name]  # just to check if raise error
     except (AttributeError, IndexError):
         remote_name = 'origin'
 
@@ -120,6 +147,7 @@ def is_remote_and_local_same(repo_project, force_fetch=False):
             return local_and_remote_are_at_same_commit(repo, remote_name, local_head_name)
     return False
 
+
 # remote compare END
 ############################################################################################
 mode = "default"
@@ -127,31 +155,10 @@ if len(sys.argv) > 1:
     mode = str(sys.argv[1])
 
 if len(sys.argv) > 1 and not (mode in ["r", "rf"]):
-    print("Mini help:")
-    print("\t" + sys.argv[0] + " r\n\tRun script with remote mode - will compare to remotes.")
-    print("\t" + sys.argv[0] + " rf\n\tRun script with remote mode force - will fetch changes from server and compare to remote branches.")
+    print_help()
     sys.exit()
 
-clean_repo_paths = []
-dirty_repo_paths = []
-for project in projects_list:
-    if is_repo_dirty(project.path):
-        dirty_repo_paths.append(project.path)
-    else:
-        clean_repo_paths.append(project.path)
-
-
-print(bcolors.GREEN + "\nCLEAN repos" + bcolors.ENDC)
-for repository_path in clean_repo_paths:
-    print(repository_path + "/")
-
-
-print(bcolors.DARK_PURPLE + "\nDIRTY repos" + bcolors.ENDC)
-for repository_path in dirty_repo_paths:
-    print(repository_path + "/")
-    print_untracked_files(repository_path)
-    print_modified_files(repository_path)
-    print_stagged_files(repository_path)
+check_repositories_local_state()
 
 if mode in ["r", "rf"]:
     print(bcolors.DARK_PURPLE + "\nRemote mode - compare local to remote" + bcolors.ENDC)
@@ -162,4 +169,3 @@ if mode in ["r", "rf"]:
             print(bcolors.RED + project.path + "/" + bcolors.ENDC)
 
 print("\n")
-
