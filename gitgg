@@ -1,0 +1,34 @@
+#!/bin/bash
+if [ -d $1 ]; then
+    REPO_PATH=$1
+else
+    REPO_PATH=`dirname $1`
+fi
+
+pushd () {
+    command pushd "$@" > /dev/null
+}
+
+popd () {
+    command popd "$@" > /dev/null
+}
+
+check_is_repo() {
+  git -C $REPO_PATH log -n1 1>/dev/null 2>/dev/null
+  LAST_RESULT=$?
+
+  if [ $LAST_RESULT != 0 ]; then
+    echo "\"$REPO_PATH\" is not a git repository"
+    exit 1
+  fi
+}
+
+if [ -z $REPO_PATH ] ; then
+  REPO_PATH=`pwd`
+fi
+
+check_is_repo $REPO_PATH
+
+pushd $REPO_PATH
+git gui &
+popd

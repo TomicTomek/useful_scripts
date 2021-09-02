@@ -1,0 +1,43 @@
+#!/bin/bash
+REPO_PATH=$BASH_ARGV
+
+pushd () {
+    command pushd "$@" > /dev/null
+}
+
+popd () {
+    command popd "$@" > /dev/null
+}
+
+check_is_repo() {
+  git -C $1 log -n1 1>/dev/null 2>/dev/null
+  LAST_RESULT=$?
+
+  if [ $LAST_RESULT != 0 ]; then
+    echo "\"$1\" is not a git repository"
+    exit 1
+  fi
+}
+
+if [ -z $REPO_PATH ] ; then
+  REPO_PATH=`pwd`
+fi
+
+check_is_repo $REPO_PATH
+
+#remove last script argument
+#SCRIPT_ARGUMENTS=( "$@" )
+#unset "SCRIPT_ARGUMENTS[${#SCRIPT_ARGUMENTS[@]}-1]"
+
+echo $@
+for i in "$@"; do
+  echo "$i"
+done
+
+#remove last script argument
+set -- "${@:1:$(($#-1))}"
+
+pushd $REPO_PATH
+#git $SCRIPT_ARGUMENTS
+git $@
+popd
